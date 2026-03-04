@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How Klaviyo's Bayesian Engine Ends Endless Email A/B Tests with 95% Confidence Winners</title>
+  <meta name="description" content="Klaviyo's Bayesian stats let you declare email A/B winners with 95% confidence after 1,000-5,000 opens, cutting test times in half and accelerating revenue gains for shrinking lists." />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #1a1a2e;
+      --ink-mid: #3a3a5c;
+      --ink-light: #5a5a7a;
+      --accent: #e85d26;
+      --accent-soft: #fff1eb;
+      --rule: #e8e4df;
+      --bg: #faf9f7;
+      --white: #ffffff;
+      --max: 740px;
+    }
+    html { font-size: 18px; scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+    .site-header {
+      background: var(--ink);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .site-header .logo {
+      font-family: 'Lora', serif;
+      font-size: 0.82rem;
+      color: #fff;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      opacity: 0.65;
+    }
+    .site-header .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .hero {
+      background: var(--ink);
+      padding: 72px 24px 64px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 60% at 50% 110%, rgba(232,93,38,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero .tag {
+      display: inline-block;
+      font-size: 0.68rem; font-weight: 600;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(232,93,38,0.4);
+      border-radius: 100px;
+      padding: 5px 14px; margin-bottom: 28px;
+    }
+    .hero h1 {
+      font-family: 'Lora', serif;
+      font-size: clamp(1.65rem, 4vw, 2.5rem);
+      font-weight: 600; color: #fff;
+      line-height: 1.25;
+      max-width: 680px; margin: 0 auto 20px;
+    }
+    .hero .deck {
+      font-size: 1rem; color: rgba(255,255,255,0.58);
+      max-width: 540px; margin: 0 auto 36px; line-height: 1.65;
+    }
+    .hero .meta {
+      display: flex; align-items: center; justify-content: center;
+      gap: 18px; font-size: 0.76rem; color: rgba(255,255,255,0.38);
+    }
+    .hero .meta .sep { opacity: 0.4; }
+    .article-wrap { max-width: var(--max); margin: 0 auto; padding: 56px 24px 80px; }
+    .lead {
+      font-family: 'Lora', serif;
+      font-size: 1.12rem; line-height: 1.82;
+      color: var(--ink-light);
+      border-left: 3px solid var(--accent);
+      padding-left: 20px; margin-bottom: 48px;
+    }
+    h2 {
+      font-family: 'Lora', serif;
+      font-size: 1.38rem; font-weight: 600;
+      color: var(--ink); margin
