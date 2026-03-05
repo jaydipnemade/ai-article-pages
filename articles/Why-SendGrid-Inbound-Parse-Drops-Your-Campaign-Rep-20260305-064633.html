@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Why SendGrid Inbound Parse Drops Your Campaign Replies — Timeout, Signature, and Attachment Fixes</title>
+  <meta name="description" content="Fix SendGrid Inbound Parse webhook failures from 5-second timeouts, signature mismatches, and attachment mishandling to capture every campaign reply and protect your response rates." />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #1a1a2e;
+      --ink-mid: #3a3a5c;
+      --ink-light: #5a5a7a;
+      --accent: #e85d26;
+      --accent-soft: #fff1eb;
+      --rule: #e8e4df;
+      --bg: #faf9f7;
+      --white: #ffffff;
+      --max: 740px;
+    }
+    html { font-size: 18px; scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+    .site-header {
+      background: var(--ink);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .site-header .logo {
+      font-family: 'Lora', serif;
+      font-size: 0.82rem;
+      color: #fff;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      opacity: 0.65;
+    }
+    .site-header .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+    .hero {
+      background: var(--ink);
+      padding: 72px 24px 64px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 60% at 50% 110%, rgba(232,93,38,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero .tag {
+      display: inline-block;
+      font-size: 0.68rem; font-weight: 600;
+      letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(232,93,38,0.4);
+      border-radius: 100px;
+      padding: 5px 14px; margin-bottom: 28px;
+    }
+    .hero h1 {
+      font-family: 'Lora', serif;
+      font-size: clamp(1.65rem, 4vw, 2.5rem);
+      font-weight: 600; color: #fff;
+      line-height: 1.25;
+      max-width: 680px; margin: 0 auto 20px;
+    }
+    .hero .deck {
+      font-size: 1rem; color: rgba(255,255,255,0.58);
+      max-width: 540px; margin: 0 auto 36px; line-height: 1.65;
+    }
+    .hero .meta {
+      display: flex; align-items: center; justify-content: center;
+      gap: 18px; font-size: 0.76rem; color: rgba(255,255,255,0.38);
+    }
+    .hero .meta .sep { opacity: 0.4; }
+    .article-wrap { max-width: var(--max); margin: 0 auto; padding: 56px 24px 80px; }
+    .lead {
+      font-family: 'Lora', serif;
+      font-size: 1.12rem; line-height: 1.82;
+      color: var(--ink-light);
+      border-left: 3px solid var(--accent);
+      padding-left: 20px; margin-bottom: 48px;
+    }
+    h2 {
+      font-family: 'Lora', serif;
+      font-size: 1.38rem; font-weight: 600;
+      color: var(--ink); margin: 52px 0 16px;
+    }
+    h2::after {
+      content: ''; display: block;
+      width: 34px; height: 2px;
+      background: var(--accent); margin-top: 10px;
+    }
+    h3 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem; font-weight: 600;
+      color: var(--ink-mid); margin: 32px 0 10px;
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    p { margin-bottom: 22px; color: var(--ink-mid); }
+    .pullquote {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 22px 28px; margin: 36px 0;
+      font-family: 'Lora', serif; font-style: italic;
+      font-size: 1.04rem; color: #7a3010; line-height: 1.72;
+    }
+    .callout {
+      background: #f0f4ff;
+      border: 1px solid #c8d5f5;
+      border-radius: 10px;
+      padding: 22px 26px; margin: 32px 0;
+    }
+    .callout .callout-label {
+      font-size: 0.68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.13em;
+      color: #3a5ad9; margin-bottom: 10px;
+    }
+    .callout p { font-size: 0.92rem; color: #2a3a6e; margin: 0; line-height: 1.65; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 32px 0; }
+    @media (max-width: 540px) { .metrics { grid-template-columns: 1fr; } }
+    .metric-card {
+      background: var(--white); border: 1px solid var(--rule);
+      border-radius: 10px; padding: 20px 18px; text-align: center;
+    }
+    .metric-card .value {
+      font-family: 'Lora', serif; font-size: 1.85rem;
+      font-weight: 600; color: var(--accent);
+      line-height: 1; margin-bottom: 6px;
+    }
+    .metric-card .label { font-size: 0.76rem; color: var(--ink-light); line-height: 1.4; }
+    .checklist { list-style: none; margin: 20px 0 28px; padding: 0; }
+    .checklist li {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--rule);
+      font-size: 0.94rem; color: var(--ink-mid); line-height: 1.6;
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .checklist li::before {
+      content: '\2713'; flex-shrink: 0;
+      width: 22px; height: 22px;
+      background: var(--accent); color: #fff;
+      border-radius: 50%; font-size: 0.63rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+    .stages { counter-reset: stage; list-style: none; margin: 20px 0 28px; padding: 0; }
+    .stages li {
+      counter-increment: stage;
+      display: flex; align-items: flex-start; gap: 18px;
+      padding: 18px 0; border-bottom: 1px solid var(--rule);
+    }
+    .stages li:last-child { border-bottom: none; }
+    .stages li::before {
+      content: counter(stage); flex-shrink: 0;
+      width: 32px; height: 32px;
+      background: var(--ink); color: #fff;
+      font-size: 0.8rem; font-weight: 600;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+    .stages li .stage-body strong { display: block; font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; color: var(--ink); }
+    .stages li .stage-body span { font-size: 0.9rem; color: var(--ink-light); line-height: 1.6; }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 28px 0; }
+    @media (max-width: 480px) { .compare { grid-template-columns: 1fr; } }
+    .compare-col { background: var(--white); border: 1px solid var(--rule); border-radius: 10px; padding: 20px 18px; }
+    .compare-col .col-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; color: var(--accent); }
+    .compare-col p { font-size: 0.88rem; color: var(--ink-mid); margin: 0; line-height: 1.6; }
+    .article-img { width: 100%; border-radius: 10px; display: block; margin: 36px 0; object-fit: cover; max-height: 380px; background: #e8e4df; }
+    hr.divider { border: none; border-top: 1px solid var(--rule); margin: 48px 0; }
+    .closing { background: var(--ink); color: #fff; border-radius: 14px; padding: 40px 36px; margin-top: 56px; text-align: center; }
+    .closing h2 { font-family: 'Lora', serif; font-size: 1.35rem; color: #fff; margin: 0 0 14px; }
+    .closing h2::after { background: var(--accent); margin: 10px auto 0; }
+    .closing p { font-size: 0.94rem; color: rgba(255,255,255,0.58); max-width: 460px; margin: 0 auto; line-height: 1.7; }
+    .site-footer { background: var(--ink); text-align: center; padding: 24px; font-size: 0.73rem; color: rgba(255,255,255,0.28); }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="dot"></div>
+    <span class="logo">Email Marketing Intelligence</span>
+  </header>
+  <section class="hero">
+  <div class="tag">Inbound Processing · Webhooks</div>
+  <h1>Why SendGrid Inbound Parse Drops Your Campaign Replies — Timeout, Signature, and Attachment Fixes</h1>
+  <p class="deck">Marketing teams lose up to 25% of inbound replies to webhook timeouts and verification failures, crippling lead routing and suppression lists. This guide reveals the exact thresholds and fixes to capture every response.</p>
+  <div class="meta"><span>Email Marketing</span><span class="sep">·</span><span>7 min read</span><span class="sep">·</span><span>Guide</span></div>
+</section>
+  <article class="article-wrap">
+    <p class="lead">You're firing off campaigns, seeing solid open rates, but those precious replies—leads begging for follow-up or customers unsubscribing—vanish into the ether. SendGrid's Inbound Parse webhook, meant to snag every response and pipe it to your CRM or automation flow, is quietly dropping 10 to 30 percent of them. Timeouts, signature mismatches, and bungled attachments are the culprits, and with Gmail and Yahoo's strict engagement rules in play, ignoring this means your response rates tank while competitors scoop up every signal.</p>
+    <div class="metrics">
+      <div class="metric-card"><div class="value">5s</div><div class="label">Response Timeout</div></div>
+      <div class="metric-card"><div class="value">3</div><div class="label">Retry Attempts</div></div>
+      <div class="metric-card"><div class="value">25MB</div><div class="label">Attachment Limit</div></div>
+    </div>
+    <h2>How Inbound Parse Works (and Where It Breaks First)</h2>
+    <p>Picture this: a prospect hits reply on your nurture email. Instead of bouncing around email servers, that response gets routed straight to SendGrid via special mail exchange records on your domain. SendGrid strips it down into clean JSON data—sender details, subject, body text, even attachments—and fires it as a POST request to your webhook endpoint. From there, you route it to HubSpot for lead scoring, Klaviyo for segmentation updates, or a suppression list to halt bad sends.</p>
+    <p>But here's where it crumbles first: your endpoint has exactly five seconds to acknowledge receipt with a success signal. Miss that, and SendGrid retries three times over twenty minutes before giving up forever. Marketing teams hooked to sluggish CRMs like older HubSpot tiers watch 20 percent or more vanish because their synchronous processing chokes under load. It's like a relay race where your runner trips at the handoff—frustrating, and costly when replies make up five to 15 percent of campaign value.</p>
+    <img src="https://im.runware.ai/image/os/a01d21/ws/2/ii/77eb91ca-6c10-4a9a-83f5-895a36406918.jpg" alt="Diagram of email reply flowing through SendGrid Inbound Parse to webhook endpoint" class="article-img" />
+    <hr class="divider" />
+    <h2>Fixing Signature Verification to Stop Ghost Rejects</h2>
+    <p>Next big killer: signature verification. SendGrid tags every payload with a digital seal using a shared secret key you set up. This seal, computed via a hashing method that combines headers and body content, proves the data hasn't been tampered with en route. But if your server's clock drifts more than five minutes from SendGrid's—common on under-maintained hosts—the seal check fails, rejecting 15 to 30 percent of replies silently.</p>
+    <blockquote class="pullquote">A five-minute clock drift turns hot leads into ghosts—sync your servers now.</blockquote>
+    <p>The fix is straightforward: keep your server time in perfect sync using network time protocols, which pull accurate timestamps from global atomic clocks. Then, in your endpoint logic, recompute the seal from the incoming headers and your secret, matching it against what SendGrid sends. No match? Log it and respond anyway to avoid drops, but alert yourself for deeper issues. Teams doing this reclaim 20 percent of lost replies overnight.</p>
+    <div class="compare">
+      <div class="compare-col"><div class="col-label">Before</div><p>Slow synchronous saves to CRM timeout at five seconds, triggering retries and drops. Clock skew rejects valid payloads without notice.</p></div>
+      <div class="compare-col"><div class="col-label">After</div><p>Async queues acknowledge instantly; time sync ensures every seal validates, capturing 95 percent-plus of replies.</p></div>
+    </div>
+    <div class="callout">
+      <div class="callout-label">Key Insight</div>
+      <p>Signature failures spike with volume because tiny clock drifts compound. Prioritize time sync over fancy parsing—it's the low-hanging fruit reclaiming the most replies for marketing workflows.</p>
+    </div>
+    <hr class="divider" />
+    <h2>Parsing Attachments and Noisy HTML Without Errors</h2>
+    
+    <p>HTML replies add chaos: promotional noise from the original email muddies intent detection, dropping accuracy from 92 percent on plain text to 78 percent. Pull the clean text and HTML fields separately, then feed them into natural language tools to classify as positive leads, complaints, or unsubs. For attachments, decode the blobs and scan for patterns—like PDF keywords for opt-outs—before routing.</p>
+    <img src="https://im.runware.ai/image/os/a08d21/ws/2/ii/60eeea31-5661-4ab8-9e37-5a9aee9aa650.jpg" alt="Example of parsed email attachment and HTML content in webhook payload" class="article-img" />
+    <h3>Pro Tip for Noisy Replies</h3>
+    <p>Strip HTML tags first, then score sentences for sentiment. Tools like those from OpenAI excel here, turning "love it, send more" into a nurture trigger while flagging "stop emailing."</p>
+    <ul class="checklist">
+      <li>Endpoint returns success signal in under five seconds, even under simulated load.</li>
+      <li>Server time synced precisely, with drift under five minutes.</li>
+      <li>Signature recomputed and matched from headers using your secret key.</li>
+      <li>Domain's mail routing points fully to SendGrid's parsing service.</li>
+      <li>Secure connection with a trusted certificate, no redirects or self-signed issues.</li>
+      <li>Logs track attachments array and both text and HTML body fields for full visibility.</li>
+    </ul>
+    <hr class="divider" />
+    <h2>Scaling Webhooks for High-Volume Campaigns</h2>
+    <ol class="stages">
+      <li><div class="stage-body"><strong>DNS Setup</strong><span>Point your domain's incoming mail routing to SendGrid's parser. This change takes 24 to 48 hours to spread across global servers, so plan ahead before ramping sends.</span></div></li>
+      <li><div class="stage-body"><strong>Webhook Endpoint</strong><span>Build a handler that verifies the seal, acknowledges instantly, and queues heavy work like CRM saves for later processing.</span></div></li>
+      <li><div class="stage-body"><strong>Parsing Logic</strong><span>Extract sender, text, HTML, and attachments; classify intent to route positives to sales, negatives to suppression.</span></div></li>
+      <li><div class="stage-body"><strong>Workflow Trigger</strong><span>Push to tools like HubSpot or Klaviyo asynchronously, ensuring no bottlenecks at scale.</span></div></li>
+      <li><div class="stage-body"><strong>Monitor and Iterate</strong><span>Watch activity logs for 95 percent-plus capture rates, tweaking based on drop patterns.</span></div></li>
+    </ol>
+    <p>For 10,000-plus daily replies, ditch no-code bridges like Zapier—they cap at 85 percent uptime. Spin up serverless functions on AWS Lambda or Node.js setups with queues for 99.9 percent reliability. HTTPS is non-negotiable; valid certs from free services like Let's Encrypt prevent 10 percent silent drops from self-signed mistakes.</p>
+    <img src="https://im.runware.ai/image/os/a15d18/ws/2/ii/111e3b1e-f47c-4208-895a-6e3c216e1f2d.jpg" alt="High-volume webhook scaling with queues and monitoring dashboard" class="article-img" />
+    <hr class="divider" />
+    <h2>Testing and Monitoring Your Setup</h2>
+    <p>Don't launch blind. Simulate traffic with load tools to confirm sub-five-second responses. Check mail routing with domain queries, verify seals on sample payloads, and monitor SendGrid's activity logs for patterns like retry spikes. Benchmarks from reply tools show fixed setups hit 95 percent capture, directly boosting engagement signals under 2026 compliance rules.</p>
+    <p>Integrate no-code for quick wins, but custom code owns scale. Your replies are gold—don't let sloppy webhooks bury them.</p>
+    <div class="closing">
+      <h2>The Bottom Line</h2>
+      <p>SendGrid Inbound Parse drops replies from timeouts, bad signatures, and ignored attachments, costing 25 percent of your signals. Nail the five-second ack, sync clocks, parse everything, and queue for scale to capture 95 percent-plus. Start with DNS and endpoint tests today—your response rates will thank you.</p>
+    </div>
+  </article>
+  <footer class="site-footer">Email Marketing Intelligence &nbsp;·&nbsp; Deliverability &amp; Strategy</footer>
+</body>
+</html>
